@@ -116,14 +116,14 @@
 </head>
 <body>
     <div id="app">
-        <!-- หน้า Login แบบปุ่มเดียวรวมกัน -->
+        <!-- หน้า Login รวมช่องเดียว -->
         <div id="login-view" class="view active">
             <h2 style="text-align: center; color: #ff9800;">🏰 Labubu Smart System</h2>
             <p style="text-align: center; color: #aaa;">ระบบเข้าสู่ระบบเพื่อควบคุมห้องส่วนตัว</p>
 
             <div class="card">
                 <h4 style="margin-top: 0;">🔑 เข้าสู่ระบบ</h4>
-                <input type="text" id="login-username" placeholder="ชื่อผู้ใช้ (Username หรือ Admin)">
+                <input type="text" id="login-username" placeholder="ชื่อผู้ใช้ (เช่น Yuuma หรือ Labubu)">
                 <input type="password" id="login-password" placeholder="รหัสผ่าน (Password)">
                 <button class="btn btn-primary" onclick="unifiedLogin()">เข้าสู่ระบบ</button>
             </div>
@@ -171,10 +171,10 @@
             </div>
         </div>
 
-        <!-- หน้าจอ Admin (ยูมะ) -->
+        <!-- หน้าจอ Admin (Yuuma) -->
         <div id="admin-view" class="view">
             <div class="header">
-                <h3 style="margin: 0; color: #e17055;">👑 ยูมะ Admin Dashboard</h3>
+                <h3 style="margin: 0; color: #e17055;">👑 Yuuma Admin Dashboard</h3>
                 <button class="btn-sm" onclick="logout()">ออกจากระบบ</button>
             </div>
 
@@ -189,15 +189,15 @@
 
             <!-- เปลี่ยนรหัสผ่าน Admin -->
             <div class="card">
-                <h4 style="margin-top: 0;">🔒 เปลี่ยนรหัสผ่าน Admin ของยูมะ</h4>
+                <h4 style="margin-top: 0;">🔒 เปลี่ยนรหัสผ่าน Admin ของ Yuuma</h4>
                 <input type="password" id="admin-old-pass" placeholder="รหัสผ่าน Admin ปัจจุบัน">
                 <input type="password" id="admin-new-pass" placeholder="รหัสผ่าน Admin ใหม่">
                 <button class="btn btn-secondary" onclick="changeAdminPassword()">อัปเดตรหัสผ่าน Admin</button>
             </div>
 
-            <!-- รายชื่อ User ทั้งหมด และเพิ่มสิทธิ์ตามใจชอบ -->
+            <!-- รายชื่อ User ทั้งหมด -->
             <div class="card">
-                <h4 style="margin-top: 0;">📋 รายชื่อ User และจัดการสิทธิ์ตามใจชอบ</h4>
+                <h4 style="margin-top: 0;">📋 รายชื่อ User และจัดการสิทธิ์</h4>
                 <div id="user-list"></div>
             </div>
         </div>
@@ -229,16 +229,19 @@
             switchView('login-view');
         }
 
-        // ระบบ Login รวมในปุ่มเดียว
+        // ระบบ Login ผูกกับชื่อ Yuuma และรหัสผ่านแอดมิน
         function unifiedLogin() {
             let u = document.getElementById('login-username').value.trim();
             let p = document.getElementById('login-password').value;
 
-            // ตรวจสอบว่าเป็น Admin ของยูมะหรือไม่
-            if (u.toLowerCase() === "yuma" || u.toLowerCase() === "admin" || p === adminPassword) {
+            // ตรวจสอบว่าเป็น Admin (Yuuma)
+            if (u.toLowerCase() === "yuuma") {
                 if (p === adminPassword) {
                     switchView('admin-view');
                     renderUserList();
+                    return;
+                } else {
+                    alert("❌ รหัสผ่าน Admin ของ Yuuma ไม่ถูกต้อง!");
                     return;
                 }
             }
@@ -325,6 +328,11 @@
                 return;
             }
 
+            if (u.toLowerCase() === "yuuma") {
+                alert("⚠️ ไม่สามารถใช้ชื่อนี้เป็นชื่อ User ทั่วไปได้ เนื่องจากเป็นชื่อ Admin ครับ!");
+                return;
+            }
+
             if (users[u]) {
                 alert("⚠️ มีชื่อผู้ใช้นี้ในระบบแล้ว!");
                 return;
@@ -349,7 +357,7 @@
             if (oldP === adminPassword) {
                 if (newP.length >= 4) {
                     adminPassword = newP;
-                    alert("✅ เปลี่ยนรหัสผ่าน Admin เรียบร้อยแล้ว!");
+                    alert("✅ เปลี่ยนรหัสผ่าน Admin ของ Yuuma เรียบร้อยแล้ว!");
                     document.getElementById('admin-old-pass').value = "";
                     document.getElementById('admin-new-pass').value = "";
                 } else {
@@ -360,7 +368,6 @@
             }
         }
 
-        // เพิ่มสิทธิ์วันตามจำนวนที่ระบุเองได้เลย
         function addCustomDaysToUser(u) {
             let inputElem = document.getElementById(`custom-days-${u}`);
             let days = parseInt(inputElem.value);
@@ -386,6 +393,14 @@
             renderUserList();
         }
 
+        function deleteUser(u) {
+            if (confirm(`⚠️ ยืนยันการลบบัญชี "${u}" ออกจากระบบใช่ไหม?`)) {
+                delete users[u];
+                alert(`🗑️ ลบบัญชี "${u}" เรียบร้อยแล้ว!`);
+                renderUserList();
+            }
+        }
+
         function renderUserList() {
             let container = document.getElementById('user-list');
             container.innerHTML = "";
@@ -407,6 +422,7 @@
                         <button class="btn-sm" style="background:#2196f3;" onclick="addCustomDaysToUser('${u}')">+ ขยายเวลา</button>
                     </div>
                     <button class="btn-sm" style="background:#f44336; width:100%; margin-top:6px;" onclick="revokeUser('${u}')">⛔ ระงับสิทธิ์ทันที</button>
+                    <button class="btn-sm" style="background:#546e7a; width:100%; margin-top:6px;" onclick="deleteUser('${u}')">🗑️ ลบบัญชีผู้ใช้</button>
                 `;
                 container.appendChild(div);
             });

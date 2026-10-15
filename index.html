@@ -116,7 +116,7 @@
 </head>
 <body>
     <div id="app">
-        <!-- หน้า Login -->
+        <!-- หน้า Login รวมช่องเดียว -->
         <div id="login-view" class="view active">
             <h2 style="text-align: center; color: #ff9800;">🏰 Labubu Smart System</h2>
             <p style="text-align: center; color: #aaa;">ระบบเข้าสู่ระบบเพื่อควบคุมห้องส่วนตัว</p>
@@ -236,15 +236,206 @@
         }
 
         function unifiedLogin() {
-            let uInput = document.getElementById('login-username');
-            let pInput = document.getElementById('login-password');
-            
-            let u = uInput.value.trim();
-            let p = pInput.value;
+            let u = document.getElementById('login-username').value.trim();
+            let p = document.getElementById('login-password').value;
 
             if (!u || !p) {
                 alert("⚠️ กรุณากรอกชื่อผู้ใช้และรหัสผ่านให้ครบถ้วนครับ!");
                 return;
             }
 
-            if (u.toLowerCase() === "y
+            if (u.toLowerCase() === "yuuma") {
+                if (p === adminPassword) {
+                    switchView('admin-view');
+                    renderUserList();
+                    return;
+                } else {
+                    alert("❌ รหัสผ่าน Admin ของ Yuuma ไม่ถูกต้อง!");
+                    return;
+                }
+            }
+
+            if (users[u] && users[u].password === p) {
+                currentUser = u;
+                document.getElementById('display-user-name').innerText = u;
+                switchView('labubu-view');
+                startLeaseTimer();
+            } else {
+                alert("❌ ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง!");
+            }
+        }
+
+        function startLeaseTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                if (!currentUser || !users[currentUser]) return;
+
+                let now = new Date().getTime();
+                let distance = users[currentUser].leaseEndTime - now;
+
+                if (distance <= 0) {
+                    document.getElementById('lease-timer').innerText = "หมดอายุแล้ว";
+                    document.getElementById('controls-section').classList.add('hidden');
+                    document.getElementById('expired-msg').classList.remove('hidden');
+                } else {
+                    let days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    let hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    let minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    let seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                    document.getElementById('lease-timer').innerText = `${days} วัน ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    document.getElementById('controls-section').classList.remove('hidden');
+                    document.getElementById('expired-msg').classList.add('hidden');
+                }
+            }, 1000);
+        }
+
+        function unlockDoor() {
+            let pass = document.getElementById('door-passcode-input').value;
+            if (users[currentUser] && users[currentUser].password === pass) {
+                let statusElem = document.getElementById('door-status');
+                statusElem.innerText = "สถานะ: 🔓 ปลดล็อกแล้ว";
+                statusElem.style.color = "#4caf50";
+                alert("🎉 ปลดล็อกประตูห้องเรียบร้อยแล้ว!");
+            } else {
+                alert("❌ รหัสผ่านไม่ถูกต้อง!");
+            }
+            document.getElementById('door-passcode-input').value = "";
+        }
+
+        function userChangePassword() {
+            let oldP = document.getElementById('user-old-pass').value;
+            let newP = document.getElementById('user-new-pass').value.trim();
+
+            if (users[currentUser].password === oldP) {
+                if (newP.length >= 4) {
+                    users[currentUser].password = newP;
+                    alert("✅ เปลี่ยนรหัสผ่านประจำตัวสำเร็จเรียบร้อย!");
+                    document.getElementById('user-old-pass').value = "";
+                    document.getElementById('user-new-pass').value = "";
+                } else {
+                    alert("⚠️ กรุณาตั้งรหัสผ่านใหม่อย่างน้อย 4 ตัวอักษร");
+                }
+            } else {
+                alert("❌ รหัสผ่านเดิมไม่ถูกต้อง!");
+            }
+        }
+
+        function changeTemp(delta) {
+            currentTemp = Math.min(Math.max(currentTemp + delta, 16), 30);
+            document.getElementById('temp-val').innerText = currentTemp;
+        }
+
+        function createNewUser() {
+            let u = document.getElementById('new-user-name').value.trim();
+            let p = document.getElementById('new-user-pass').value.trim();
+            let days = parseInt(document.getElementById('new-user-custom-days').value);
+
+            if (!u || !p || isNaN(days) || days <= 0) {
+                alert("⚠️ กรุณากรอกชื่อผู้ใช้ รหัสผ่าน และระบุจำนวนวันสิทธิ์ให้ถูกต้อง");
+                return;
+            }
+
+            if (u.toLowerCase() === "yuuma") {
+                alert("⚠️ ไม่สามารถใช้ชื่อนี้เป็นชื่อ User ทั่วไปได้ เนื่องจากเป็นชื่อ Admin ครับ!");
+                return;
+            }
+
+            if (users[u]) {
+                alert("⚠️ มีชื่อผู้ใช้นี้ในระบบแล้ว!");
+                return;
+            }
+
+            users[u] = {
+                password: p,
+                leaseEndTime: new Date().getTime() + (days * 24 * 60 * 60 * 1000)
+            };
+
+            alert(`✅ สร้างบัญชีผู้ใช้ "${u}" พร้อมสิทธิ์ ${days} วัน เรียบร้อยแล้ว!`);
+            document.getElementById('new-user-name').value = "";
+            document.getElementById('new-user-pass').value = "";
+            document.getElementById('new-user-custom-days').value = "30";
+            renderUserList();
+        }
+
+        function changeAdminPassword() {
+            let oldP = document.getElementById('admin-old-pass').value;
+            let newP = document.getElementById('admin-new-pass').value.trim();
+
+            if (oldP === adminPassword) {
+                if (newP.length >= 4) {
+                    adminPassword = newP;
+                    alert("✅ เปลี่ยนรหัสผ่าน Admin ของ Yuuma เรียบร้อยแล้ว!");
+                    document.getElementById('admin-old-pass').value = "";
+                    document.getElementById('admin-new-pass').value = "";
+                } else {
+                    alert("⚠️ กรุณาตั้งรหัสผ่านใหม่ตั้งแต่อย่างน้อย 4 ตัวอักษรขึ้นไป");
+                }
+            } else {
+                alert("❌ รหัสผ่าน Admin เดิมไม่ถูกต้อง!");
+            }
+        }
+
+        function addCustomDaysToUser(u) {
+            let inputElem = document.getElementById(`custom-days-${u}`);
+            let days = parseInt(inputElem.value);
+
+            if (isNaN(days) || days <= 0) {
+                alert("⚠️ กรุณาระบุจำนวนวันให้ถูกต้อง");
+                return;
+            }
+
+            let now = new Date().getTime();
+            if (users[u].leaseEndTime < now) {
+                users[u].leaseEndTime = now + (days * 24 * 60 * 60 * 1000);
+            } else {
+                users[u].leaseEndTime += (days * 24 * 60 * 60 * 1000);
+            }
+            alert(`✅ เพิ่มสิทธิ์ให้ ${u} เพิ่มอีก ${days} วันเรียบร้อยแล้ว!`);
+            renderUserList();
+        }
+
+        function revokeUser(u) {
+            users[u].leaseEndTime = new Date().getTime() - 1000;
+            alert(`⛔ ระงับสิทธิ์การใช้งานของ ${u} ทันทีเรียบร้อยแล้ว!`);
+            renderUserList();
+        }
+
+        function deleteUser(u) {
+            if (confirm(`⚠️ ยืนยันการลบบัญชี "${u}" ออกจากระบบใช่ไหม?`)) {
+                delete users[u];
+                alert(`🗑️ ลบบัญชี "${u}" เรียบร้อยแล้ว!`);
+                renderUserList();
+            }
+        }
+
+        function renderUserList() {
+            let container = document.getElementById('user-list');
+            container.innerHTML = "";
+
+            Object.keys(users).forEach(u => {
+                let div = document.createElement('div');
+                div.className = 'user-item';
+                
+                let now = new Date().getTime();
+                let diff = users[u].leaseEndTime - now;
+                let daysLeft = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+
+                div.innerHTML = `
+                    <strong>👤 ${u}</strong> (รหัสผ่าน: ${users[u].password})<br>
+                    <span>สิทธิ์คงเหลือ: ${daysLeft > 0 ? daysLeft + ' วัน' : '❌ หมดอายุแล้ว'}</span>
+                    
+                    <div class="custom-days-box">
+                        <input type="number" id="custom-days-${u}" placeholder="จำนวนวัน" min="1" value="7">
+                        <button type="button" class="btn-sm" style="background:#2196f3;" onclick="addCustomDaysToUser('${u}')">+ ขยายเวลา</button>
+                    </div>
+                    <button type="button" class="btn-sm" style="background:#f44336; width:100%; margin-top:6px;" onclick="revokeUser('${u}')">⛔ ระงับสิทธิ์ทันที</button>
+                    <button type="button" class="btn-sm" style="background:#546e7a; width:100%; margin-top:6px;" onclick="deleteUser('${u}')">🗑️ ลบบัญชีผู้ใช้</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>

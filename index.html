@@ -285,7 +285,7 @@
             let pass = document.getElementById('door-passcode-input').value;
             if (users[currentUser] && users[currentUser].password === pass) {
                 document.getElementById('door-status').innerText = "สถานะ: 🔓 ปลดล็อกแล้ว";
-                document.getElementById('door-status'].style.color = "#4caf50";
+                document.getElementById('door-status').style.color = "#4caf50";
                 alert("🎉 ปลดล็อกประตูห้องเรียบร้อยแล้ว!");
             } else {
                 alert("❌ รหัสผ่านไม่ถูกต้อง!");

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Labubu Multi-User Smart System</title>
+    <title>Labubu Smart System</title>
     <style>
         * {
             box-sizing: border-box;
@@ -101,36 +101,31 @@
         .btn-success { background: #4caf50; color: white; }
         .btn-secondary { background: #757575; color: white; }
         .btn-danger { background: #f44336; color: white; }
-        .btn-sm { padding: 6px 12px; border-radius: 6px; border: none; background: #444; color: white; cursor: pointer; }
+        .btn-sm { padding: 8px 12px; border-radius: 6px; border: none; background: #444; color: white; cursor: pointer; font-weight: bold; }
 
         .temp-display { font-size: 48px; text-align: center; margin: 15px 0; font-weight: bold; color: #00bcd4; }
         .temp-btns { display: flex; justify-content: center; gap: 20px; }
         .btn-circle { width: 50px; height: 50px; border-radius: 50%; border: none; background: #00bcd4; color: white; font-size: 24px; font-weight: bold; cursor: pointer; }
         .hidden { display: none !important; }
         hr { border: 0; height: 1px; background: #444; margin: 15px 0; }
-        .user-item { background: #333; padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 14px; }
+        .user-item { background: #333; padding: 12px; border-radius: 8px; margin-bottom: 12px; font-size: 14px; border: 1px solid #444; }
+        .custom-days-box { display: flex; gap: 8px; margin-top: 8px; }
+        .custom-days-box input { width: 60%; margin: 0; text-align: center; }
+        .custom-days-box button { width: 40%; }
     </style>
 </head>
 <body>
     <div id="app">
-        <!-- หน้า Login -->
+        <!-- หน้า Login แบบปุ่มเดียวรวมกัน -->
         <div id="login-view" class="view active">
             <h2 style="text-align: center; color: #ff9800;">🏰 Labubu Smart System</h2>
             <p style="text-align: center; color: #aaa;">ระบบเข้าสู่ระบบเพื่อควบคุมห้องส่วนตัว</p>
 
             <div class="card">
-                <h4 style="margin-top: 0;">🔑 เข้าสู่ระบบผู้ใช้งาน (Labubu)</h4>
-                <input type="text" id="login-username" placeholder="ชื่อผู้ใช้ (Username)">
+                <h4 style="margin-top: 0;">🔑 เข้าสู่ระบบ</h4>
+                <input type="text" id="login-username" placeholder="ชื่อผู้ใช้ (Username หรือ Admin)">
                 <input type="password" id="login-password" placeholder="รหัสผ่าน (Password)">
-                <button class="btn btn-primary" onclick="loginUser()">เข้าสู่ระบบ</button>
-            </div>
-
-            <hr>
-
-            <div class="card">
-                <h4 style="margin-top: 0; color: #e17055;">👑 เข้าสู่ระบบเจ้าของ (Admin)</h4>
-                <input type="password" id="admin-password-input" placeholder="รหัสผ่าน Admin">
-                <button class="btn btn-admin" onclick="loginAdmin()">เข้าสู่ระบบ Admin</button>
+                <button class="btn btn-primary" onclick="unifiedLogin()">เข้าสู่ระบบ</button>
             </div>
         </div>
 
@@ -188,11 +183,7 @@
                 <h4 style="margin-top: 0;">➕ สร้าง User ใหม่ให้ Labubu</h4>
                 <input type="text" id="new-user-name" placeholder="ชื่อผู้ใช้ (Username)">
                 <input type="password" id="new-user-pass" placeholder="รหัสผ่านเริ่มต้น">
-                <select id="new-user-days">
-                    <option value="7">สิทธิ์เช่า 7 วัน</option>
-                    <option value="30" selected>สิทธิ์เช่า 30 วัน (1 เดือน)</option>
-                    <option value="365">สิทธิ์เช่า 365 วัน (1 ปี)</option>
-                </select>
+                <input type="number" id="new-user-custom-days" placeholder="จำนวนวันสิทธิ์การใช้งาน (ระบุเองได้)" min="1" value="30">
                 <button class="btn btn-success" onclick="createNewUser()">สร้างบัญชีผู้ใช้</button>
             </div>
 
@@ -204,16 +195,15 @@
                 <button class="btn btn-secondary" onclick="changeAdminPassword()">อัปเดตรหัสผ่าน Admin</button>
             </div>
 
-            <!-- รายชื่อ User ทั้งหมด -->
+            <!-- รายชื่อ User ทั้งหมด และเพิ่มสิทธิ์ตามใจชอบ -->
             <div class="card">
-                <h4 style="margin-top: 0;">📋 รายชื่อ User และจัดการสิทธิ์</h4>
+                <h4 style="margin-top: 0;">📋 รายชื่อ User และจัดการสิทธิ์ตามใจชอบ</h4>
                 <div id="user-list"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // ข้อมูลหลักของระบบ
         let adminPassword = "8888";
         let users = {
             "buboo": {
@@ -236,15 +226,24 @@
             if (timerInterval) clearInterval(timerInterval);
             document.getElementById('login-username').value = "";
             document.getElementById('login-password').value = "";
-            document.getElementById('admin-password-input').value = "";
             switchView('login-view');
         }
 
-        // --- ระบบ Login ---
-        function loginUser() {
+        // ระบบ Login รวมในปุ่มเดียว
+        function unifiedLogin() {
             let u = document.getElementById('login-username').value.trim();
             let p = document.getElementById('login-password').value;
 
+            // ตรวจสอบว่าเป็น Admin ของยูมะหรือไม่
+            if (u.toLowerCase() === "yuma" || u.toLowerCase() === "admin" || p === adminPassword) {
+                if (p === adminPassword) {
+                    switchView('admin-view');
+                    renderUserList();
+                    return;
+                }
+            }
+
+            // ตรวจสอบว่าเป็น User ทั่วไป (Labubu)
             if (users[u] && users[u].password === p) {
                 currentUser = u;
                 document.getElementById('display-user-name').innerText = u;
@@ -255,17 +254,6 @@
             }
         }
 
-        function loginAdmin() {
-            let p = document.getElementById('admin-password-input').value;
-            if (p === adminPassword) {
-                switchView('admin-view');
-                renderUserList();
-            } else {
-                alert("❌ รหัสผ่าน Admin ไม่ถูกต้อง!");
-            }
-        }
-
-        // --- ระบบของ User (Labubu) ---
         function startLeaseTimer() {
             if (timerInterval) clearInterval(timerInterval);
 
@@ -327,14 +315,13 @@
             document.getElementById('temp-val').innerText = currentTemp;
         }
 
-        // --- ระบบของ Admin (ยูมะ) ---
         function createNewUser() {
             let u = document.getElementById('new-user-name').value.trim();
             let p = document.getElementById('new-user-pass').value.trim();
-            let days = parseInt(document.getElementById('new-user-days').value);
+            let days = parseInt(document.getElementById('new-user-custom-days').value);
 
-            if (!u || !p) {
-                alert("⚠️ กรุณากรอกชื่อผู้ใช้และรหัสผ่านให้ครบถ้วน");
+            if (!u || !p || isNaN(days) || days <= 0) {
+                alert("⚠️ กรุณากรอกชื่อผู้ใช้ รหัสผ่าน และระบุจำนวนวันสิทธิ์ให้ถูกต้อง");
                 return;
             }
 
@@ -351,6 +338,7 @@
             alert(`✅ สร้างบัญชีผู้ใช้ "${u}" พร้อมสิทธิ์ ${days} วัน เรียบร้อยแล้ว!`);
             document.getElementById('new-user-name').value = "";
             document.getElementById('new-user-pass').value = "";
+            document.getElementById('new-user-custom-days').value = "30";
             renderUserList();
         }
 
@@ -372,14 +360,23 @@
             }
         }
 
-        function addDaysToUser(u, days) {
+        // เพิ่มสิทธิ์วันตามจำนวนที่ระบุเองได้เลย
+        function addCustomDaysToUser(u) {
+            let inputElem = document.getElementById(`custom-days-${u}`);
+            let days = parseInt(inputElem.value);
+
+            if (isNaN(days) || days <= 0) {
+                alert("⚠️ กรุณาระบุจำนวนวันให้ถูกต้อง");
+                return;
+            }
+
             let now = new Date().getTime();
             if (users[u].leaseEndTime < now) {
                 users[u].leaseEndTime = now + (days * 24 * 60 * 60 * 1000);
             } else {
                 users[u].leaseEndTime += (days * 24 * 60 * 60 * 1000);
             }
-            alert(`✅ ขยายเวลาให้ ${u} เพิ่มอีก ${days} วันเรียบร้อยแล้ว!`);
+            alert(`✅ เพิ่มสิทธิ์ให้ ${u} เพิ่มอีก ${days} วันเรียบร้อยแล้ว!`);
             renderUserList();
         }
 
@@ -404,10 +401,12 @@
                 div.innerHTML = `
                     <strong>👤 ${u}</strong> (รหัสผ่าน: ${users[u].password})<br>
                     <span>สิทธิ์คงเหลือ: ${daysLeft > 0 ? daysLeft + ' วัน' : '❌ หมดอายุแล้ว'}</span>
-                    <div style="margin-top: 8px;">
-                        <button class="btn-sm" style="background:#2196f3;" onclick="addDaysToUser('${u}', 30)">+30 วัน</button>
-                        <button class="btn-sm" style="background:#f44336;" onclick="revokeUser('${u}')">ระงับสิทธิ์</button>
+                    
+                    <div class="custom-days-box">
+                        <input type="number" id="custom-days-${u}" placeholder="จำนวนวัน" min="1" value="7">
+                        <button class="btn-sm" style="background:#2196f3;" onclick="addCustomDaysToUser('${u}')">+ ขยายเวลา</button>
                     </div>
+                    <button class="btn-sm" style="background:#f44336; width:100%; margin-top:6px;" onclick="revokeUser('${u}')">⛔ ระงับสิทธิ์ทันที</button>
                 `;
                 container.appendChild(div);
             });
